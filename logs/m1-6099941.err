@@ -1,0 +1,62 @@
+CMake Warning (dev) at CMakeLists.txt:21 (find_package):
+  Policy CMP0167 is not set: The FindBoost module is removed.  Run "cmake
+  --help-policy CMP0167" for policy details.  Use the cmake_policy command to
+  set the policy and suppress this warning.
+
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Deprecation Warning at dtl/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+In file included from /scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../benchmarks/common.h:4,
+                 from /scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/benchmarks/benchmark_pgm.cc:4:
+/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../searches/linear_search_avx.h:10:58: warning: ignoring attributes on template argument ‘__m256i(__m256i, __m256i)’ [-Wignored-attributes]
+   10 |                   std::function<__m256i(__m256i, __m256i)> func_cmp,
+      |                                                          ^
+/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../searches/linear_search_avx.h:87:58: warning: ignoring attributes on template argument ‘__m256i(__m256i, __m256i)’ [-Wignored-attributes]
+   87 |                   std::function<__m256i(__m256i, __m256i)> func_cmp,
+      |                                                          ^
+In file included from /scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/benchmarks/common.h:4,
+                 from /scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/benchmarks/benchmark_btree.cc:4:
+/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../searches/linear_search_avx.h:10:58: warning: ignoring attributes on template argument ‘__m256i(__m256i, __m256i)’ [-Wignored-attributes]
+   10 |                   std::function<__m256i(__m256i, __m256i)> func_cmp,
+      |                                                          ^
+/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../searches/linear_search_avx.h:87:58: warning: ignoring attributes on template argument ‘__m256i(__m256i, __m256i)’ [-Wignored-attributes]
+   87 |                   std::function<__m256i(__m256i, __m256i)> func_cmp,
+      |                                                          ^
+In file included from /scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../benchmarks/common.h:4,
+                 from /scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/benchmarks/benchmark_dynamic_pgm.cc:4:
+/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../searches/linear_search_avx.h:10:58: warning: ignoring attributes on template argument ‘__m256i(__m256i, __m256i)’ [-Wignored-attributes]
+   10 |                   std::function<__m256i(__m256i, __m256i)> func_cmp,
+      |                                                          ^
+/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/dtl/../searches/linear_search_avx.h:87:58: warning: ignoring attributes on template argument ‘__m256i(__m256i, __m256i)’ [-Wignored-attributes]
+   87 |                   std::function<__m256i(__m256i, __m256i)> func_cmp,
+      |                                                          ^
+CMake Warning (dev) at CMakeLists.txt:21 (find_package):
+  Policy CMP0167 is not set: The FindBoost module is removed.  Run "cmake
+  --help-policy CMP0167" for policy details.  Use the cmake_policy command to
+  set the policy and suppress this warning.
+
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Deprecation Warning at dtl/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+
+
+Traceback (most recent call last):
+  File "/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/scripts/analysis.py", line 169, in <module>
+    result_analysis()
+  File "/scratch/gpfs/KOROLOVA/bt4811/cos_568_prj/COS568-LI-SP26/scripts/analysis.py", line 65, in result_analysis
+    import matplotlib.pyplot as plt
+ModuleNotFoundError: No module named 'matplotlib'
