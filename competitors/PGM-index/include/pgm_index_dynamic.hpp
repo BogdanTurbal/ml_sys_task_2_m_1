@@ -439,16 +439,29 @@ public:
      * @return an iterator to the beginning
      */
     iterator begin() const {
-        uint8_t i;
-        for (i = min_level; i < used_levels && get_level(i).empty(); ++i);
-        if (i == used_levels)
-            return end();
-        for (; i < used_levels; ++i) {
+        bool lo_is_set = false;
+        typename LevelType::const_iterator lo;
+        std::vector<std::pair<typename LevelType::const_iterator, int16_t>> initial_pairs{};
+        initial_pairs.reserve(used_levels - min_level);
+
+        for (uint8_t i = min_level; i < used_levels; ++i) {
             auto &level = get_level(i);
-            for (auto it = level.begin(); it != level.end(); ++it)
-                if (!it->deleted())
-                    return iterator(this, it, i);
+            if (level.empty())
+                continue;
+            auto it = level.begin();
+            while (it != level.end() && it->deleted())
+                ++it;
+            if (it != level.end()) {
+                initial_pairs.emplace_back(it, i);
+                if (!lo_is_set || it->key() < lo->key()) {
+                    lo = it;
+                    lo_is_set = true;
+                }
+            }
         }
+
+        if (lo_is_set)
+            return iterator(this, lo, used_levels, initial_pairs);
         return end();
     }
 

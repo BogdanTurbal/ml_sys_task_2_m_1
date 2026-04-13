@@ -1,0 +1,164 @@
+\documentclass[11pt]{article}
+% Required packages
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\title{COS 568: Systems and Machine Learning \\ \Large Project: Learned Index; Task 2, Milestone 1}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Task 2 Milestone 1: HybridPGMLIPP Index}
+
+We introduce \textbf{HybridPGMLIPP}, a hybrid learned index that combines the fast lookup of
+LIPP with the efficient insertion of Dynamic PGM (DPGM).
+The index is evaluated on the \texttt{fb} dataset (100\,M 64-bit unsigned integers)
+on a Della cluster node with Intel CPUs, across two mixed-workload scenarios.
+
+\subsection*{Design}
+
+HybridPGMLIPP maintains two internal structures:
+\begin{itemize}
+    \item \textbf{LIPP} as the primary read-optimized store, bulk-loaded with the full dataset at build time.
+    \item \textbf{DynamicPGM (DPGM)} as a write buffer that absorbs incoming insertions.
+\end{itemize}
+
+On each lookup, the index first checks the DPGM write buffer (for recently inserted keys),
+then falls through to LIPP. On each insertion, the key is inserted into DPGM.
+Once the DPGM buffer accumulates \textbf{100\,000 keys}---equal to $0.1\%$ of the
+100\,M-key base dataset---all buffered keys are flushed into LIPP and the buffer is reset.
+
+This flush threshold was chosen to keep the write buffer small relative to the base dataset,
+so lookups rarely need to search the buffer, while not flushing so frequently as to incur
+excessive LIPP insertion overhead per key.
+
+\paragraph{Flush counts per workload.}
+Each workload issues 2\,M operations total:
+\begin{itemize}
+    \item \textbf{Mixed 10\% insert:} $2\text{M} \times 0.1 = 200{,}000$ insertions $\;\Rightarrow\;$
+          $\lfloor 200{,}000 / 100{,}000 \rfloor = \mathbf{2}$ flushes.
+    \item \textbf{Mixed 90\% insert:} $2\text{M} \times 0.9 = 1{,}800{,}000$ insertions $\;\Rightarrow\;$
+          $\lfloor 1{,}800{,}000 / 100{,}000 \rfloor = \mathbf{18}$ flushes.
+\end{itemize}
+In both cases the insert count divides evenly into 100\,000, so the buffer is always empty after
+the final flush with no residual unflushed keys.
+
+\subsection*{Experimental Results}
+
+Figures~\ref{fig:mix10_tp}--\ref{fig:mix90_sz} show throughput and index size for all three indexes
+on the \texttt{fb} dataset under the two mixed workloads.
+Table~\ref{tab:results} summarizes the best-variant throughput (mean of 3 runs) for each index.
+
+\begin{table}[H]
+\centering
+\caption{Best-variant throughput (Mops/s) on \texttt{fb\_100M} mixed workloads.}
+\label{tab:results}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Index} & \textbf{Mixed 10\% Insert} & \textbf{Mixed 90\% Insert} \\
+\midrule
+DynamicPGM     & 1.18 & 4.04 \\
+LIPP           & 4.99 & 2.33 \\
+HybridPGMLIPP  & 1.41 & 1.51 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{m2_results/mixed_10insert_throughput.png}
+        \caption{Throughput --- Mixed 10\% insert.}
+        \label{fig:mix10_tp}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{m2_results/mixed_10insert_index_size.png}
+        \caption{Index size --- Mixed 10\% insert.}
+        \label{fig:mix10_sz}
+    \end{subfigure}
+
+    \vspace{0.5em}
+
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{m2_results/mixed_90insert_throughput.png}
+        \caption{Throughput --- Mixed 90\% insert.}
+        \label{fig:mix90_tp}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \includegraphics[width=\textwidth]{m2_results/mixed_90insert_index_size.png}
+        \caption{Index size --- Mixed 90\% insert.}
+        \label{fig:mix90_sz}
+    \end{subfigure}
+    \caption{Throughput and index size for all three indexes on \texttt{fb\_100M} across mixed workloads.
+             The index-size plots include a zoomed inset (top right) highlighting the tiny but measurable
+             difference between LIPP and HybridPGMLIPP.}
+    \label{fig:all}
+\end{figure}
+
+\subsection*{Analysis}
+
+\paragraph{Mixed 10\% insert (lookup-heavy).}
+With only 200\,000 insertions (2 flushes), HybridPGMLIPP achieves \textbf{1.41\,Mops/s}---below
+LIPP (4.99\,Mops/s) and below DynamicPGM (1.18\,Mops/s) as well.
+Despite the small number of flushes, each flush requires scanning all 100\,000 DPGM keys and
+inserting them one-by-one into LIPP (a slow, conflict-resolving pointer operation).
+Between flushes, lookups must also check the DPGM buffer for up to 99\,999 keys before
+falling through to LIPP, adding overhead to the dominant lookup path.
+LIPP's direct model-guided slot access gives it a decisive advantage in this regime.
+
+\paragraph{Mixed 90\% insert (insert-heavy).}
+With 1\,800\,000 insertions (18 flushes), HybridPGMLIPP reaches \textbf{1.51\,Mops/s}---well
+below both DynamicPGM (4.04\,Mops/s) and LIPP (2.33\,Mops/s).
+The 18 flush events are expensive: each batch of 100\,000 keys must be individually inserted
+into LIPP (rather than bulk-loaded), and the DPGM buffer must also be rebuilt from scratch
+after each flush.
+DPGM's amortized logarithmic-merge strategy handles high insert volumes far more efficiently.
+
+\paragraph{Index size.}
+As shown in Figures~\ref{fig:mix10_sz} and~\ref{fig:mix90_sz}, all three indexes are measured
+after completing the full 2\,M-operation workload (including all insertions and flushes).
+HybridPGMLIPP's index size is dominated by its LIPP component, which holds all 100\,M keys
+after every flush has been committed:
+\begin{itemize}
+    \item \textbf{Mixed 10\% insert:}
+          LIPP\,=\,12.700947\,GB vs.\ HybridPGMLIPP\,=\,12.702649\,GB
+          ($\Delta \approx \mathbf{1.70\,MB}$, i.e.\ $0.013\%$).
+    \item \textbf{Mixed 90\% insert:}
+          LIPP\,=\,12.656663\,GB vs.\ HybridPGMLIPP\,=\,12.658368\,GB
+          ($\Delta \approx \mathbf{1.71\,MB}$, i.e.\ $0.014\%$).
+\end{itemize}
+This tiny overhead arises from the DPGM write buffer: it holds at most 100\,000 keys
+at any point in time before a flush.
+Each key--value record in DynamicPGM occupies $\sim$16--17 bytes, so the buffer contributes
+at most $100{,}000 \times 17 \approx \mathbf{1.7\,MB}$, which matches the measured difference
+exactly.
+Since the 0.1\% flush threshold is specifically designed to keep the buffer tiny,
+this negligible overhead is an inherent design property: a larger threshold would produce a
+larger buffer (and more visible overhead) but would hurt lookup performance by forcing
+lookups to scan a bigger write buffer.
+Because this $\sim$1.7\,MB difference is invisible on a full-scale bar chart, the index-size
+plots (Figures~\ref{fig:mix10_sz} and~\ref{fig:mix90_sz}) include a zoomed inset that
+magnifies the LIPP vs.\ HybridPGMLIPP bars so the difference can be seen.
+DynamicPGM ($\approx$1.71\,GB) remains $\approx$7.4$\times$ smaller than either
+LIPP-based structure.
+
+\paragraph{Summary.}
+In its current form, HybridPGMLIPP does not outperform any baseline on either workload.
+The bottleneck is the flush mechanism: inserting keys into LIPP one-by-one is expensive,
+and the DPGM buffer lookup overhead hurts the read path.
+Future improvements could include bulk-loading flushed keys into a new LIPP instance via
+merge, tuning the flush threshold (larger threshold $\Rightarrow$ fewer but costlier flushes;
+smaller $\Rightarrow$ more frequent but cheaper flushes), or adopting a two-level
+bulk-load strategy to reduce per-flush LIPP insertion cost.
+
+\end{document}
